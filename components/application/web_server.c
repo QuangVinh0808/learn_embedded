@@ -4,6 +4,8 @@
 #include "lm35.h"
 #include "esp_http_server.h"
 #include "esp_log.h"
+#include <stdio.h>
+#include "ota_update.h"
 
 static const char *tag = "[HTTP_SERVER]";
 
@@ -103,7 +105,14 @@ esp_err_t http_server_start(void)
     }
 
     httpd_config_t config = HTTPD_DEFAULT_CONFIG();
+
     config.server_port = 80;
+
+    /* Thêm không gian stack cho handler OTA. */
+    config.stack_size = 8192;
+
+    /* Một lần chờ nhận dữ liệu có timeout 5 giây. */
+    config.recv_wait_timeout = 5;
 
     esp_err_t err = httpd_start(
         &server,
@@ -120,63 +129,47 @@ esp_err_t http_server_start(void)
         return err;
     }
 
-    err = httpd_register_uri_handler(
-        server,
-        &root_route
-    );
+    err = httpd_register_uri_handler(server, &root_route);
 
     if (err != ESP_OK) {
-        ESP_LOGE(
-            tag,
-            "Register GET / failed: %s",
-            esp_err_to_name(err)
-        );
-
-        httpd_stop(server);
-        server = NULL;
-
-        return err;
+        goto register_failed;
     }
 
-    err = httpd_register_uri_handler(
-        server,
-        &status_route
-    );
+    err = httpd_register_uri_handler(server, &status_route);
 
     if (err != ESP_OK) {
-        ESP_LOGE(
-            tag,
-            "Register GET /status failed: %s",
-            esp_err_to_name(err)
-        );
-
-        httpd_stop(server);
-        server = NULL;
-
-        return err;
+        goto register_failed;
     }
-    err = httpd_register_uri_handler(
-        server,
-        &temp_route
-    );
+
+    err = httpd_register_uri_handler(server, &temp_route);
+
     if (err != ESP_OK) {
-        ESP_LOGE(
-            tag,
-            "Register GET /temp failed: %s",
-            esp_err_to_name(err)
-        );
+        goto register_failed;
+    }
 
-        httpd_stop(server);
-        server = NULL;
+    /* Bổ sung GET /ota và POST /ota. */
+    err = ota_register_routes(server);
 
-        return err;
+    if (err != ESP_OK) {
+        goto register_failed;
     }
 
     ESP_LOGI(
         tag,
-        "HTTP ready: GET / and GET /status, port %u",
-        (unsigned int)config.server_port
+        "HTTP ready: /, /status, /temp, /ota"
     );
 
     return ESP_OK;
+
+register_failed:
+    ESP_LOGE(
+        tag,
+        "Register route failed: %s",
+        esp_err_to_name(err)
+    );
+
+    httpd_stop(server);
+    server = NULL;
+
+    return err;
 }

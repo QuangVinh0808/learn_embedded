@@ -11,6 +11,7 @@
 #include "lm35.h"
 #include "web_server.h"
 #include "wifi_ap.h"
+#include "ota_update.h"
 
 static const char *TAG = "[MAIN]";
 
@@ -86,9 +87,13 @@ void app_main(void)
     ESP_ERROR_CHECK(wifi_init_softap());
     ESP_ERROR_CHECK(http_server_start());
 
+    ESP_ERROR_CHECK(ota_confirm_running_app());
+
     ESP_LOGI(TAG, "Wi-Fi SSID: ESP32_Server");
     ESP_LOGI(TAG, "Open http://192.168.4.1/");
     ESP_LOGI(TAG, "Open http://192.168.4.1/status");
+    ESP_LOGI(TAG, "Open http://192.168.4.1/temp");
+    ESP_LOGI(TAG, "Open http://192.168.4.1/ota");
 
     while (1) {
         gpio4_high();

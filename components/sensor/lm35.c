@@ -58,26 +58,6 @@ esp_err_t lm35_init(void)
 
     write_reg(GPIO_ENABLE_W1TC,LM35_GPIO_MASK);
 
-    /*
-     * Cấu hình IO MUX của GPIO5.
-     *
-     * MCU_SEL = 0:
-     *      chọn chức năng RTC/Analog.
-     *
-     * FUN_IE = 0:
-     *      tắt digital input.
-     *
-     * FUN_WPU = 0:
-     *      tắt điện trở pull-up.
-     *
-     * FUN_WPD = 0:
-     *      tắt điện trở pull-down.
-     *
-     * IO_MUX_GPIO5_REG offset = 0x0018.
-     *
-     * Nguồn:
-     * ESP32-S3 TRM Section 6.14.2, trang 498.
-     */
     value = read_reg(
         IO_MUX_GPIO5,
         0xFFFFFFFFu
